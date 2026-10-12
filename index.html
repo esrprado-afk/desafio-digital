@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Desafio Digital — Jogos e Aprendizagem</title>
+  <style>
+    :root {
+      --ink: #20243a;
+      --muted: #5d6478;
+      --paper: #ffffff;
+      --background: #f2f4fb;
+      --primary: #4f46e5;
+      --primary-dark: #3730a3;
+      --correct: #166534;
+      --correct-bg: #dcfce7;
+      --wrong: #991b1b;
+      --wrong-bg: #fee2e2;
+      --border: #d9deec;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px 14px;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background: linear-gradient(145deg, #eef2ff, var(--background));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .game {
+      width: 100%;
+      max-width: 720px;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: clamp(22px, 5vw, 40px);
+      box-shadow: 0 18px 50px rgba(31, 41, 90, .12);
+    }
+    .eyebrow {
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      font-size: .78rem;
+      font-weight: 800;
+      margin: 0 0 8px;
+    }
+    h1 { margin: 0; font-size: clamp(1.7rem, 4vw, 2.35rem); line-height: 1.15; }
+    .intro { color: var(--muted); line-height: 1.6; margin: 12px 0 24px; }
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: .92rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .progress-track {
+      height: 9px;
+      border-radius: 99px;
+      background: #e7e9f4;
+      overflow: hidden;
+      margin-bottom: 28px;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--primary);
+      transition: width .25s ease;
+    }
+    h2 { font-size: 1.25rem; line-height: 1.45; margin: 0 0 20px; }
+    .answers { display: grid; gap: 12px; }
+    .answer {
+      width: 100%;
+      padding: 15px 16px;
+      border: 2px solid var(--border);
+      border-radius: 13px;
+      background: #fff;
+      color: var(--ink);
+      text-align: left;
+      font-size: 1rem;
+      line-height: 1.45;
+      cursor: pointer;
+      transition: border-color .15s, background .15s, transform .15s;
+    }
+    .answer:hover:not(:disabled), .answer:focus-visible {
+      border-color: var(--primary);
+      outline: none;
+      transform: translateY(-1px);
+    }
+    .answer:disabled { cursor: default; opacity: 1; }
+    .answer.correct { border-color: #22c55e; background: var(--correct-bg); color: var(--correct); }
+    .answer.wrong { border-color: #ef4444; background: var(--wrong-bg); color: var(--wrong); }
+    .feedback {
+      display: none;
+      padding: 15px 16px;
+      margin-top: 18px;
+      border-radius: 12px;
+      line-height: 1.55;
+    }
+    .feedback.show { display: block; }
+    .feedback.good { color: var(--correct); background: var(--correct-bg); }
+    .feedback.bad { color: var(--wrong); background: var(--wrong-bg); }
+    .actions { display: flex; justify-content: flex-end; margin-top: 22px; }
+    .primary {
+      border: 0;
+      border-radius: 12px;
+      padding: 13px 20px;
+      background: var(--primary);
+      color: white;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .primary:hover { background: var(--primary-dark); }
+    .primary:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 3px; }
+    .primary:disabled { opacity: .45; cursor: not-allowed; }
+    .result { text-align: center; padding: 12px 0 4px; }
+    .result .score { font-size: 3rem; font-weight: 800; color: var(--primary); margin: 16px 0 8px; }
+    .result p { line-height: 1.6; color: var(--muted); }
+    .hidden { display: none !important; }
+    .note { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 24px; color: var(--muted); font-size: .85rem; line-height: 1.5; }
+    @media (max-width: 480px) {
+      body { padding: 12px 8px; align-items: flex-start; }
+      .game { border-radius: 16px; }
+      .status-row { font-size: .82rem; }
+      .answer { padding: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="game">
+    <p class="eyebrow">Quiz educativo • Ensino Médio</p>
+    <h1>Desafio Digital</h1>
+    <p class="intro">Jogos e aprendizagem: teste suas ideias sobre como os jogos digitais podem apoiar a construção do conhecimento. Leia cada pergunta, escolha uma alternativa e confira o feedback.</p>
+
+    <section id="quiz" aria-live="polite">
+      <div class="status-row">
+        <span id="questionCounter">Pergunta 1 de 5</span>
+        <span id="scoreCounter">Pontuação: 0</span>
+      </div>
+      <div class="progress-track" aria-label="Progresso do jogo">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <h2 id="questionText"></h2>
+      <div class="answers" id="answers"></div>
+      <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
+      <div class="actions">
+        <button class="primary" id="nextButton" disabled>Próxima pergunta</button>
+      </div>
+    </section>
+
+    <section id="result" class="result hidden" aria-live="polite">
+      <p class="eyebrow">Desafio concluído</p>
+      <h2>Você terminou o jogo!</h2>
+      <div class="score" id="finalScore">0/5</div>
+      <p id="resultMessage"></p>
+      <button class="primary" id="restartButton">Jogar novamente</button>
+    </section>
+
+    <p class="note">Depois de jogar, converse com a turma: o que tornou as perguntas mais fáceis ou difíceis? Como o feedback ajudou? Em quais situações um jogo pode favorecer a aprendizagem?</p>
+  </main>
+
+  <script>
+    const questions = [
+      {
+        question: "1. Qual é uma possibilidade pedagógica importante dos jogos digitais?",
+        answers: [
+          "Substituir completamente o professor em todas as aulas.",
+          "Estimular participação, experimentação e aprendizagem ativa.",
+          "Garantir que todos aprendam da mesma forma e no mesmo ritmo.",
+          "Eliminar a necessidade de objetivos de aprendizagem."
+        ],
+        correct: 1,
+        explanation: "Isso mesmo! Os jogos podem favorecer a participação ativa e a experimentação, desde que estejam articulados a objetivos pedagógicos."
+      },
+      {
+        question: "2. Qual deve ser o papel do professor ao usar um jogo digital em aula?",
+        answers: [
+          "Deixar os estudantes jogarem sem qualquer orientação ou conversa posterior.",
+          "Usar o jogo apenas para ocupar o tempo que sobrou.",
+          "Planejar a atividade, mediar a aprendizagem e relacionar o jogo ao conteúdo.",
+          "Avaliar somente quem terminou primeiro."
+        ],
+        correct: 2,
+        explanation: "Correto! O professor atua como mediador: define objetivos, orienta a experiência e ajuda a turma a refletir sobre o que aprendeu."
+      },
+      {
+        question: "3. Por que o feedback durante um jogo pode contribuir para aprender?",
+        answers: [
+          "Porque mostra o resultado da ação e permite rever ideias ou estratégias.",
+          "Porque impede o estudante de cometer erros.",
+          "Porque torna desnecessário estudar o conteúdo.",
+          "Porque serve apenas para premiar quem vence."
+        ],
+        correct: 0,
+        explanation: "Exatamente. O feedback ajuda o estudante a perceber consequências, identificar equívocos e ajustar suas estratégias."
+      },
+      {
+        question: "4. Qual exemplo demonstra aprendizagem ativa com jogos digitais?",
+        answers: [
+          "Copiar as respostas de um colega sem discutir o conteúdo.",
+          "Assistir ao jogo sem tomar decisões nem participar.",
+          "Escolher estratégias, observar resultados e explicar as decisões tomadas.",
+          "Memorizar apenas a pontuação final."
+        ],
+        correct: 2,
+        explanation: "Muito bem! Tomar decisões, observar resultados e explicar estratégias envolve participação e reflexão sobre a experiência."
+      },
+      {
+        question: "5. O que ajuda a tornar um jogo digital uma atividade educativa significativa?",
+        answers: [
+          "Escolher o jogo apenas porque tem gráficos atraentes.",
+          "Definir objetivos, regras e formas de feedback, além de discutir a experiência.",
+          "Evitar qualquer relação entre o jogo e o conteúdo curricular.",
+          "Considerar somente a velocidade dos jogadores."
+        ],
+        correct: 1,
+        explanation: "Isso mesmo! A intencionalidade pedagógica, as regras claras, o feedback e a reflexão conectam a experiência do jogo aos objetivos de aprendizagem."
+      }
+    ];
+
+    let currentQuestion = 0;
+    let score = 0;
+    let answered = false;
+
+    const questionCounter = document.getElementById("questionCounter");
+    const scoreCounter = document.getElementById("scoreCounter");
+    const progressBar = document.getElementById("progressBar");
+    const questionText = document.getElementById("questionText");
+    const answersContainer = document.getElementById("answers");
+    const feedback = document.getElementById("feedback");
+    const nextButton = document.getElementById("nextButton");
+    const quizSection = document.getElementById("quiz");
+    const resultSection = document.getElementById("result");
+
+    function renderQuestion() {
+      answered = false;
+      const item = questions[currentQuestion];
+      questionCounter.textContent = `Pergunta ${currentQuestion + 1} de ${questions.length}`;
+      scoreCounter.textContent = `Pontuação: ${score}`;
+      progressBar.style.width = `${(currentQuestion / questions.length) * 100}%`;
+      questionText.textContent = item.question;
+      answersContainer.innerHTML = "";
+      feedback.textContent = "";
+      feedback.className = "feedback";
+      nextButton.disabled = true;
+      nextButton.textContent = currentQuestion === questions.length - 1 ? "Ver resultado" : "Próxima pergunta";
+
+      item.answers.forEach((answer, index) => {
+        const button = document.createElement("button");
+        button.className = "answer";
+        button.type = "button";
+        button.textContent = `${String.fromCharCode(65 + index)}. ${answer}`;
+        button.addEventListener("click", () => chooseAnswer(index, button));
+        answersContainer.appendChild(button);
+      });
+    }
+
+    function chooseAnswer(index, selectedButton) {
+      if (answered) return;
+      answered = true;
+      const item = questions[currentQuestion];
+      const buttons = [...answersContainer.querySelectorAll("button")];
+      buttons.forEach(button => button.disabled = true);
+
+      if (index === item.correct) {
+        score++;
+        selectedButton.classList.add("correct");
+        feedback.className = "feedback show good";
+        feedback.textContent = `Resposta correta! ${item.explanation}`;
+      } else {
+        selectedButton.classList.add("wrong");
+        buttons[item.correct].classList.add("correct");
+        feedback.className = "feedback show bad";
+        feedback.textContent = `Ainda não! ${item.explanation}`;
+      }
+      scoreCounter.textContent = `Pontuação: ${score}`;
+      nextButton.disabled = false;
+    }
+
+    function showResult() {
+      quizSection.classList.add("hidden");
+      resultSection.classList.remove("hidden");
+      progressBar.style.width = "100%";
+      document.getElementById("finalScore").textContent = `${score}/${questions.length}`;
+      const percent = Math.round((score / questions.length) * 100);
+      let message;
+      if (percent === 100) {
+        message = "Excelente! Você reconheceu os principais elementos que ajudam a conectar jogos digitais e objetivos pedagógicos.";
+      } else if (percent >= 60) {
+        message = "Bom trabalho! Revise os feedbacks e pense em como a mediação docente pode aprofundar a aprendizagem.";
+      } else {
+        message = "Continue explorando! Releia as explicações e converse com a turma sobre como planejar jogos com intencionalidade pedagógica.";
+      }
+      document.getElementById("resultMessage").textContent = `${message} Sua pontuação foi de ${percent}%.`;
+    }
+
+    nextButton.addEventListener("click", () => {
+      if (!answered) return;
+      if (currentQuestion < questions.length - 1) {
+        currentQuestion++;
+        renderQuestion();
+      } else {
+        showResult();
+      }
+    });
+
+    document.getElementById("restartButton").addEventListener("click", () => {
+      currentQuestion = 0;
+      score = 0;
+      resultSection.classList.add("hidden");
+      quizSection.classList.remove("hidden");
+      renderQuestion();
+    });
+
+    renderQuestion();
+  </script>
+</body>
+</html>
